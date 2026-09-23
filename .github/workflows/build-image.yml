@@ -53,24 +53,24 @@ jobs:
 
       - name: Select Dockerfile
         run: |
-          if [ "${{ github.inputs.model }}" = "wan-gp" ]; then
-            echo "DOCKERFILE=./runpod-docker/Dockerfile.wangp" >> $GITHUB_ENV
+          if [ "${{ inputs.model }}" = "wan-gp" ]; then
+            echo "DOCKERFILE=./Dockerfile.wangp" >> $GITHUB_ENV
           else
-            echo "DOCKERFILE=./runpod-docker/Dockerfile" >> $GITHUB_ENV
+            echo "DOCKERFILE=./Dockerfile" >> $GITHUB_ENV
           fi
 
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
-          context: ./runpod-docker
+          context: .
           file: ${{ env.DOCKERFILE }}
           push: true
           platforms: linux/amd64
           tags: |
-            ${{ env.DOCKERHUB_REPO }}/${{ github.inputs.image_tag }}
+            ${{ env.DOCKERHUB_REPO }}/${{ inputs.image_tag }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
           sbom: false
           build-args: |
-            MODEL=${{ github.inputs.model }}
+            MODEL=${{ inputs.model }}
