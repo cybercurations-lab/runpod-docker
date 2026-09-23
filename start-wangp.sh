@@ -1,5 +1,6 @@
 #!/bin/bash
 # WanGP startup script for RunPod
+# Launch: python wgp.py --listen --server-port 7860
 
 set -e
 
@@ -13,9 +14,9 @@ if [ -d "$VOLUME_MOUNT/models" ]; then
     ln -sf "$VOLUME_MOUNT/models"/* "$WANGP_DIR/models/" 2>/dev/null || true
 fi
 
-# Start WanGP web UI
+# Start WanGP web UI (binds to 0.0.0.0:7860)
 cd "$WANGP_DIR"
-exec python3 app.py \
-    --listen 0.0.0.0 \
-    --port 7860 \
+exec python3 wgp.py \
+    --listen \
+    --server-port 7860 \
     "$@"

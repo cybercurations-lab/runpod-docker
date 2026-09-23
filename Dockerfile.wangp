@@ -1,21 +1,23 @@
 # ============================================================
 # WanGP — RunPod Docker Image
 # ============================================================
-# WanGP (Wan2GP) — Web UI for running Wan video models.
+# WanGP (deepbeepmeep/Wan2GP) — Web UI for Wan video models.
 # Separate image from ComfyUI (different tool, different deps).
 #
-# Build via GitHub Actions (recommended — no local disk impact):
-#   Set MODEL=wan-gp in workflow dispatch
+# Base: runpod/pytorch:1.3.3-rc.171-cu1281-torch271-ubuntu2204
+#   → CUDA 12.8.1, PyTorch 2.7.1, Python 3.11 (WanGP supported config)
 #
-# Or build locally (needs ~30GB free disk):
-#   docker build --platform linux/amd64 -t cyber2000/wan-gp:v1 .
+# Build via GitHub Actions (recommended):
+#   Set model=wan-gp, image_tag=wan-gp:v1
 #
 # Deploy on RunPod:
 #   image: "cyber2000/wan-gp:v1"
-#   ports: ["7860/http"]  (WanGP default port)
+#   ports: ["7860/http"]
+#
+# Launch: python wgp.py --listen --server-port 7860
 # ============================================================
 
-FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
+FROM runpod/pytorch:1.3.3-rc.171-cu1281-torch271-ubuntu2204
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
@@ -23,28 +25,20 @@ ENV WORKSPACE=/workspace
 
 # ---- System deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git wget curl ffmpeg && \
+    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# ---- WanGP ----
+# ---- Clone WanGP (correct repo) ----
 WORKDIR /workspace
-RUN git clone https://github.com/2073549/Wan2GP.git /workspace/Wan2GP
+RUN git clone https://github.com/deepbeepmeep/Wan2GP.git /workspace/Wan2GP
 WORKDIR /workspace/Wan2GP
 
-# Install dependencies
+# Install dependencies (torch 2.7.1 already in base image)
 RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || \
-    pip install --no-cache-dir torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu124 && \
     pip install --no-cache-dir gradio requests Pillow
 
-# Pre-download Wan 2.2 model (optional — saves cold start time)
-# WanGP downloads models automatically on first run if not present.
-# To bake in: uncomment the download below and adjust model path.
-# RUN python3 -c "from huggingface_hub import hf_hub_download; \
-#     hf_hub_download('Wan-AI/Wan2.1-I2V-14B-480P', '...', local_dir='/workspace/models')"
-
-# Create model directory (WanGP will populate on first run, or use network volume)
-RUN mkdir -p /workspace/models /workspace/outputs
+# Create model + output directories
+RUN mkdir -p /workspace/models /workspace/outputs /workspace/config
 
 # ---- Startup script ----
 COPY start-wangp.sh /workspace/start-wangp.sh
