@@ -27,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # ---- Upgrade torch FIRST (base 2.4 too old for comfy_kitchen) ----
-RUN pip install --no-cache-dir torch torchvision torchaudio \
+RUN pip install --no-cache-dir --upgrade torch torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cu128 && \
     python3 -c "import torch; print('torch:', torch.__version__); assert torch.__version__ >= '2.7', 'torch too old'"
 
