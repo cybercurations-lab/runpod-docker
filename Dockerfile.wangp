@@ -42,14 +42,15 @@ RUN PY=$(cat /workspace/wangp-python.txt) && \
     echo "Installing requirements with: $PY" && \
     $PY -m pip install --no-cache-dir -r requirements.txt
 
-# ---- Force-reinstall torch with the same interpreter ----
+# ---- Force-reinstall torch MATCHED SET (mismatched torchaudio = ABI crash) ----
 RUN PY=$(cat /workspace/wangp-python.txt) && \
-    $PY -m pip install --no-cache-dir --force-reinstall torch==2.7.1 torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu128
+    $PY -m pip install --no-cache-dir --force-reinstall \
+      torch==2.7.1 torchvision==0.22.1 torchaudio==2.7.1 \
+      --index-url https://download.pytorch.org/whl/cu128
 
-# ---- FATAL smoke test (build fails if torch missing) ----
+# ---- FATAL smoke test (imports ALL of torch stack — catches ABI mismatch) ----
 RUN PY=$(cat /workspace/wangp-python.txt) && \
-    $PY -c "import torch; print('torch OK:', torch.__version__); import gradio; print('gradio OK')"
+    $PY -c "import torch, torchaudio, torchvision, gradio; print('torch:', torch.__version__, '| torchaudio:', torchaudio.__version__, '| torchvision:', torchvision.__version__)"
 
 # Create model + output directories
 RUN mkdir -p /workspace/models /workspace/outputs /workspace/config
