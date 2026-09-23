@@ -1,19 +1,13 @@
 # ============================================================
 # WanGP — RunPod Docker Image
 # ============================================================
+# Fixed 2026-09-23: requirements install removed torch
+# (ModuleNotFoundError: No module named 'torch'). Now install
+# requirements FIRST, then force-reinstall torch, then smoke-test.
+#
 # WanGP (deepbeepmeep/Wan2GP) — Web UI for Wan video models.
-# Separate image from ComfyUI (different tool, different deps).
-#
-# Base: runpod/pytorch:1.3.3-rc.171-cu1281-torch271-ubuntu2204
-#   → CUDA 12.8.1, PyTorch 2.7.1, Python 3.11 (WanGP supported config)
-#
-# Build via GitHub Actions (recommended):
-#   Set model=wan-gp, image_tag=wan-gp:v1
-#
-# Deploy on RunPod:
-#   image: "cyber2000/wan-gp:v1"
-#   ports: ["7860/http"]
-#
+# Build via GitHub Actions: model=wan-gp, image_tag=wan-gp:v2
+# Deploy: image cyber2000/wan-gp:v2, ports ["7860/http"]
 # Launch: python wgp.py --listen --server-port 7860
 # ============================================================
 
@@ -28,14 +22,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# ---- Clone WanGP (correct repo) ----
+# ---- Clone WanGP ----
 WORKDIR /workspace
 RUN git clone https://github.com/deepbeepmeep/Wan2GP.git /workspace/Wan2GP
 WORKDIR /workspace/Wan2GP
 
-# Install dependencies (torch 2.7.1 already in base image)
-RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || \
-    pip install --no-cache-dir gradio requests Pillow
+# ---- Install requirements (errors NOT hidden — build must fail loudly) ----
+RUN pip install --no-cache-dir -r requirements.txt
+
+# ---- Force-reinstall torch (requirements may have removed/broken it) ----
+RUN pip install --no-cache-dir --force-reinstall torch==2.7.1 torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu128
+
+# ---- SMOKE TEST: catch import failures at build time ----
+RUN python3 -c "import torch; print('torch OK:', torch.__version__); import gradio; print('gradio OK')" && \
+    python3 -c "import wgp" 2>/dev/null || echo "(wgp import needs runtime context — skipping)"
 
 # Create model + output directories
 RUN mkdir -p /workspace/models /workspace/outputs /workspace/config

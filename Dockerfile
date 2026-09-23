@@ -1,20 +1,15 @@
 # ============================================================
-# RunPod Docker Images — Multi-model support
+# Wan 2.2 ComfyUI — RunPod Pod Image
 # ============================================================
-# Build via GitHub Actions (cloud, no local disk impact):
-#   - Push this directory to a GitHub repo
-#   - Set secrets: DOCKERHUB_USERNAME, DOCKERHUB_TOKEN
-#   - Run workflow with desired model
+# Fixed 2026-09-23: base torch 2.4 too old for comfy_kitchen
+# (list[int] unsupported in infer_schema). Upgrade torch via
+# cu128 index first, then install ComfyUI.
 #
-# Or build locally if you have 50GB+ free disk:
-#   docker build --platform linux/amd64 -t cyber2000/MODEL:tag .
+# Build smoke tests ensure import failures break the BUILD,
+# not the pod at runtime.
 #
-# Image variants (select via build arg MODEL):
-#   base      — ComfyUI only, no models (~5GB)
-#   wan22     — ComfyUI + Wan 2.2 Q5_K_M (~22GB)
-#
-# For other models (Flux, SDXL), create separate Dockerfiles
-# that extend the base image.
+# Build: GitHub Actions workflow (model=wan22-comfyui)
+# Image: cyber2000/wan22-comfyui:v2
 # ============================================================
 
 FROM runpod/pytorch:2.4.0-py3.11-cuda12.4.1-devel-ubuntu22.04
@@ -26,21 +21,30 @@ ENV PYTHONUNBUFFERED=1
 ENV WORKSPACE=/workspace
 ENV COMFYUI_PORT=8188
 
-# ---- System deps (minimal) ----
+# ---- System deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git wget curl ffmpeg && \
+    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# ---- Upgrade torch FIRST (base 2.4 too old for comfy_kitchen) ----
+RUN pip install --no-cache-dir torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu128 && \
+    python3 -c "import torch; print('torch:', torch.__version__); assert torch.__version__ >= '2.7', 'torch too old'"
 
 # ---- ComfyUI ----
 WORKDIR /workspace
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /workspace/ComfyUI
 WORKDIR /workspace/ComfyUI
-
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- Custom Nodes ----
 RUN git clone https://github.com/city96/ComfyUI-GGUF.git custom_nodes/ComfyUI-GGUF && \
     pip install --no-cache-dir -r custom_nodes/ComfyUI-GGUF/requirements.txt 2>/dev/null || true
+
+# ---- SMOKE TEST: catch import failures at build time ----
+RUN python3 -c "import comfy_kitchen; print('comfy_kitchen OK')" && \
+    python3 -c "import comfy.quant_ops; print('comfy.quant_ops OK')" && \
+    echo "=== Import smoke tests passed ==="
 
 # ---- Model downloads (conditional on MODEL build arg) ----
 RUN if [ "$MODEL" = "wan22" ]; then \
@@ -54,6 +58,7 @@ RUN if [ "$MODEL" = "wan22" ]; then \
         "https://huggingface.co/city96/Wan2.1-I2V-14B-720P-GGUF/resolve/main/wan2.1-i2v-14b-720p-q5_k_m.gguf" \
         -O models/diffusion_models/wan2.1-i2v-14b-720p-q5_k_m.gguf && \
       echo "720p model downloaded" && \
+      ls -la models/diffusion_models/ && \
       echo "=== Models downloaded ==="; \
     else \
       echo "=== Base image — no models ===" && \
