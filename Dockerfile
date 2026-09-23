@@ -47,7 +47,7 @@ RUN python3 -c "import comfy_kitchen; print('comfy_kitchen OK')" && \
     echo "=== Import smoke tests passed ==="
 
 # ---- Model downloads (conditional on MODEL build arg) ----
-RUN if [ "$MODEL" = "wan22" ]; then \
+RUN if [ "$MODEL" = "wan22-comfyui" ] || [ "$MODEL" = "wan22" ]; then \
       echo "=== Downloading Wan 2.2 GGUF models ===" && \
       mkdir -p models/diffusion_models && \
       wget --no-check-certificate -q \
