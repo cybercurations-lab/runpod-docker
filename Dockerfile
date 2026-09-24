@@ -23,8 +23,12 @@ ENV COMFYUI_PORT=8188
 
 # ---- System deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 libsm6 libxext6 \
+    openssh-server && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /run/sshd && \
+    echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
 
 # ---- Upgrade torch FIRST (base 2.4 too old for comfy_kitchen) ----
 RUN pip install --no-cache-dir --upgrade torch torchvision torchaudio \

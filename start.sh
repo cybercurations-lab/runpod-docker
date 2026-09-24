@@ -21,6 +21,15 @@ fi
 # Ensure output directory exists
 mkdir -p /workspace/outputs
 
+# ---- Start SSH daemon (RunPod injects PUBLIC_KEY env) ----
+if [ -n "$PUBLIC_KEY" ]; then
+    mkdir -p /root/.ssh && chmod 700 /root/.ssh
+    echo "$PUBLIC_KEY" > /root/.ssh/authorized_keys
+    chmod 600 /root/.ssh/authorized_keys
+    /usr/sbin/sshd
+    echo "sshd started"
+fi
+
 # Start ComfyUI
 cd "$COMFYUI_DIR"
 exec python3 main.py \
