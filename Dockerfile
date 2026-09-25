@@ -112,8 +112,8 @@ RUN if [ "$MODEL" = "wan22-comfyui" ] || [ "$MODEL" = "wan22" ]; then \
       echo "=== Downloading LTX-2.3 (fp8 checkpoint + Gemma 12B) ===" && \
       mkdir -p models/checkpoints models/text_encoders && \
       wget --no-check-certificate -q \
-        "https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/checkpoints/ltx-2.3-22b-distilled-fp8.safetensors" \
-        -O models/checkpoints/ltx-2.3-22b-distilled-fp8.safetensors && \
+        "https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled.safetensors" \
+        -O models/checkpoints/ltx-2.3-22b-distilled.safetensors && \
       echo "LTX-2.3 checkpoint downloaded" && \
       wget --no-check-certificate -q \
         "https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors" \
