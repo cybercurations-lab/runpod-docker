@@ -15,6 +15,9 @@ on:
           - wan22-comfyui
           - wan-gp
           - base
+          - wan-a14b
+          - hunyuan
+          - ltx23
 
 env:
   DOCKERHUB_REPO: cyber2000
