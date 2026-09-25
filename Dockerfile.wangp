@@ -7,8 +7,8 @@
 # Fix: resolve pip's interpreter once, use it for installs AND
 # runtime. Smoke tests are now FATAL (no || echo swallowing).
 #
-# Build: GitHub Actions, model=wan-gp, image_tag=wan-gp:v3
-# Deploy: image cyber2000/wan-gp:v3, ports ["7860/http"]
+# Build: GitHub Actions, model=wan-gp, image_tag=wan-gp:v5
+# Deploy: image cyber2000/wan-gp:v5, ports ["7860/http", "22/tcp"]
 # ============================================================
 
 FROM runpod/pytorch:1.3.3-rc.171-cu1281-torch271-ubuntu2204
@@ -19,8 +19,11 @@ ENV WORKSPACE=/workspace
 
 # ---- System deps ----
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+    git wget curl ffmpeg libgl1-mesa-glx libglib2.0-0 openssh-server && \
+    apt-get clean && rm -rf /var/lib/apt/lists/* && \
+    mkdir -p /run/sshd && \
+    echo "PermitRootLogin prohibit-password" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication no" >> /etc/ssh/sshd_config
 
 # ---- DIAGNOSTIC: resolve the interpreter pip actually targets ----
 RUN echo "=== PYTHON DIAGNOSTIC ===" && \
