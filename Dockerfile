@@ -109,18 +109,14 @@ RUN if [ "$MODEL" = "wan22-comfyui" ] || [ "$MODEL" = "wan22" ]; then \
       ls -la models/diffusion_models/ models/text_encoders/ models/vae/ && \
       echo "=== Hunyuan models ready ==="; \
     elif [ "$MODEL" = "ltx23" ]; then \
-      echo "=== Downloading LTX-2.3 (fp8 checkpoint + Gemma 12B) ===" && \
+      echo "=== Downloading LTX-2.3 (Gemma 12B only; 46GB checkpoint served from VPS1) ===" && \
       mkdir -p models/checkpoints models/text_encoders && \
-      wget --no-check-certificate -q \
-        "https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-distilled.safetensors" \
-        -O models/checkpoints/ltx-2.3-22b-distilled.safetensors && \
-      echo "LTX-2.3 checkpoint downloaded" && \
       wget --no-check-certificate -q \
         "https://huggingface.co/Comfy-Org/ltx-2/resolve/main/split_files/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors" \
         -O models/text_encoders/gemma_3_12B_it_fp4_mixed.safetensors && \
       echo "Gemma 12B downloaded" && \
       ls -la models/checkpoints/ models/text_encoders/ && \
-      echo "=== LTX-2.3 models ready ==="; \
+      echo "=== LTX-2.3 image ready (checkpoint fetched at pod runtime) ==="; \
     else \
       echo "=== Base image — no models ===" && \
       mkdir -p models/diffusion_models models/checkpoints models/text_encoders models/vae; \
