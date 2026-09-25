@@ -86,22 +86,20 @@ RUN if [ "$MODEL" = "wan22-comfyui" ] || [ "$MODEL" = "wan22" ]; then \
       ls -la models/diffusion_models/ models/text_encoders/ models/vae/ && \
       echo "=== Wan A14B models ready ==="; \
     elif [ "$MODEL" = "hunyuan" ]; then \
-      echo "=== Downloading HunyuanVideo (Q8_0 + T5 + CLIP-L + VAE) ===" && \
+      echo "=== Downloading HunyuanVideo (Q8_0 + CLIP-L + LLaVA-Llama3 + VAE) ===" && \
       mkdir -p models/diffusion_models models/text_encoders models/vae && \
       wget --no-check-certificate -q \
         "https://huggingface.co/city96/HunyuanVideo-gguf/resolve/main/hunyuan-video-t2v-720p-Q8_0.gguf" \
         -O models/diffusion_models/hunyuan-video-t2v-720p-Q8_0.gguf && \
       echo "Q8_0 downloaded" && \
-      for i in 1 2 3 4; do \
-        wget --no-check-certificate -q \
-          "https://huggingface.co/hunyuanvideo-community/HunyuanVideo/resolve/main/text_encoder/model-0000${i}-of-00004.safetensors" \
-          -O models/text_encoders/hunyuan_t5_model-0000${i}-of-00004.safetensors && \
-          echo "T5 shard $i downloaded"; \
-      done && \
       wget --no-check-certificate -q \
-        "https://huggingface.co/hunyuanvideo-community/HunyuanVideo/resolve/main/text_encoder_2/model.safetensors" \
-        -O models/text_encoders/hunyuan_clip_l.safetensors && \
+        "https://huggingface.co/Comfy-Org/HunyuanVideo_repackaged/resolve/main/split_files/text_encoders/clip_l.safetensors" \
+        -O models/text_encoders/clip_l.safetensors && \
       echo "CLIP-L downloaded" && \
+      wget --no-check-certificate -q \
+        "https://huggingface.co/Comfy-Org/HunyuanVideo_repackaged/resolve/main/split_files/text_encoders/llava_llama3_fp8_scaled.safetensors" \
+        -O models/text_encoders/llava_llama3_fp8_scaled.safetensors && \
+      echo "LLaVA-Llama3 downloaded" && \
       wget --no-check-certificate -q \
         "https://huggingface.co/hunyuanvideo-community/HunyuanVideo/resolve/main/vae/diffusion_pytorch_model.safetensors" \
         -O models/vae/hunyuan_vae.safetensors && \
