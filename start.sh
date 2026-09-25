@@ -1,8 +1,9 @@
 #!/bin/bash
 # RunPod ComfyUI startup script
-# Mounts network volume if present, starts ComfyUI
-
-set -e
+# 1. Mounts network volume models if present
+# 2. Provisions SSH (host keys + authorized_keys from PUBLIC_KEY)
+# 3. Starts sshd persistently (supervised loop)
+# 4. Starts ComfyUI in foreground
 
 COMFYUI_DIR="/workspace/ComfyUI"
 VOLUME_MOUNT="/workspace-volume"
@@ -10,7 +11,6 @@ VOLUME_MOUNT="/workspace-volume"
 # If a network volume is mounted, symlink models from it
 if [ -d "$VOLUME_MOUNT/models" ]; then
     echo "Network volume detected — using models from volume"
-    # Link volume models into ComfyUI structure
     for dir in checkpoint clip unet vae lora controlnet diffusion_models text_encoders; do
         if [ -d "$VOLUME_MOUNT/models/$dir" ]; then
             ln -sf "$VOLUME_MOUNT/models/$dir"/* "$COMFYUI_DIR/models/$dir/" 2>/dev/null || true
@@ -21,13 +21,43 @@ fi
 # Ensure output directory exists
 mkdir -p /workspace/outputs
 
-# ---- Start SSH daemon (RunPod injects PUBLIC_KEY env) ----
+# ---- SSH provisioning ----
+# Generate host keys if missing (image has openssh-server but NO host keys —
+# sshd will refuse to start without them; this was the 2026-09-25 bug).
+if ! ls /etc/ssh/ssh_host_*key >/dev/null 2>&1; then
+    echo "Generating SSH host keys..."
+    ssh-keygen -A
+fi
+
+# Install authorized_keys from PUBLIC_KEY env (RunPod sets it when the pod
+# was created with startSsh, or when patched via API).
 if [ -n "$PUBLIC_KEY" ]; then
     mkdir -p /root/.ssh && chmod 700 /root/.ssh
     echo "$PUBLIC_KEY" > /root/.ssh/authorized_keys
     chmod 600 /root/.ssh/authorized_keys
+    echo "authorized_keys installed from PUBLIC_KEY"
+
+    # Start sshd and supervise it: if it exits, restart after a beat.
+    # (sshd daemonizes itself, so a plain start is fine; the loop guards
+    # against the daemon dying when the host key dir was read-only etc.)
     /usr/sbin/sshd
-    echo "sshd started"
+    if [ $? -eq 0 ]; then
+        echo "sshd started on :22"
+    else
+        echo "WARNING: sshd failed to start (exit $?)" >&2
+    fi
+    # Supervisor loop in background — only if sshd is not running
+    (
+        while true; do
+            if ! pgrep -x sshd >/dev/null 2>&1; then
+                echo "$(date -Is) sshd not running — restarting" >> /workspace/sshd-supervisor.log
+                /usr/sbin/sshd 2>> /workspace/sshd-supervisor.log
+            fi
+            sleep 30
+        done
+    ) &
+else
+    echo "WARNING: PUBLIC_KEY not set — SSH access will NOT work" >&2
 fi
 
 # Start ComfyUI
