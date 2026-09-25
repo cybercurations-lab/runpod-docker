@@ -60,6 +60,24 @@ else
     echo "WARNING: PUBLIC_KEY not set — SSH access will NOT work" >&2
 fi
 
+# ---- LTX-2.3 checkpoint: pull from VPS1 relay (image bakes Gemma only) ----
+# Non-blocking: start ComfyUI now, download 46GB in background. On reboot the
+# file persists on the container disk, so this only downloads once per pod.
+LTX_CKPT="$COMFYUI_DIR/models/checkpoints/ltx-2.3-22b-distilled.safetensors"
+LTX_RELAY_URL="${LTX_RELAY_URL:-https://56f2827c89d6630a40c0.agent37.app/ltx-2.3-22b-distilled.safetensors}"
+if [ ! -f "$LTX_CKPT" ] || [ "$(stat -c %s "$LTX_CKPT" 2>/dev/null || echo 0)" -lt 46000000000 ]; then
+    echo "LTX checkpoint missing/incomplete — pulling from relay in background"
+    mkdir -p "$COMFYUI_DIR/models/checkpoints"
+    (
+        wget -c -q --timeout=60 --tries=10 "$LTX_RELAY_URL" -O "$LTX_CKPT.tmp" \
+            && mv "$LTX_CKPT.tmp" "$LTX_CKPT" \
+            && echo "$(date -Is) LTX checkpoint downloaded" >> /workspace/ltx-download.log \
+            || echo "$(date -Is) LTX checkpoint download FAILED" >> /workspace/ltx-download.log
+    ) &
+else
+    echo "LTX checkpoint already present ($(stat -c %s "$LTX_CKPT") bytes)"
+fi
+
 # Start ComfyUI
 cd "$COMFYUI_DIR"
 exec python3 main.py \
